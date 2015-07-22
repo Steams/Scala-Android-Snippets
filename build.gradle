@@ -1,0 +1,87 @@
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * Description:
+    Build configuration for android with Scala
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+repositories{
+    mavenCentral()
+    jcenter()
+}
+
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:1.2+'
+        classpath 'jp.leafytree.gradle:gradle-android-scala-plugin:1.4'
+    }
+}
+
+tasks.withType(ScalaCompile){
+    scalaCompileOptions.useCompileDaemon = true
+}
+apply plugin: 'com.android.application'
+apply plugin: 'jp.leafytree.android-scala'
+apply from: 'https://raw.githubusercontent.com/meonlol/vim-grand/master/grand.gradle'
+
+android {
+
+    lintOptions {
+      abortOnError false
+    }
+
+    buildToolsVersion "22.0.1"
+    compileSdkVersion 22
+
+    defaultConfig {
+        minSdkVersion 17
+        targetSdkVersion 22
+        versionCode 1
+        versionName "1.0"
+    }
+
+    sourceSets {
+		main {
+            scala{
+                srcDir 'src/main/scala'
+            }
+            
+            java{
+                srcDir 'src/main/java'
+            }
+
+            manifest.srcFile 'AndroidManifest.xml'
+            resources.srcDirs = ['src/main/resources']
+            aidl.srcDirs = ['src/main']
+            renderscript.srcDirs = ['src/main']
+            res.srcDirs = ['res']
+            assets.srcDirs = ['assets']
+        }
+
+        instrumentTest.setRoot('tests')
+        androidTest.setRoot('tests')
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile 'org.scala-lang:scala-library:2.11.1'
+}
+task wrapper(type: Wrapper) {
+   gradleVersion = '2.2.1' //version required
+}
+

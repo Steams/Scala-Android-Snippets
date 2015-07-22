@@ -1,4 +1,4 @@
-package com.steams.hello
+package com.steams.snippets
 
 import android.app.{ Activity,Fragment}
 import android.os.Bundle

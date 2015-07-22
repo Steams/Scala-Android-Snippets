@@ -1,6 +1,6 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  * Description:
-    Build configuration for android with Scala
+    Build configuration for android with Scala and Eclipse
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
 repositories{
@@ -17,6 +17,7 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:1.2+'
         classpath 'jp.leafytree.gradle:gradle-android-scala-plugin:1.4'
+        classpath 'com.neenbedankt.gradle.plugins:android-apt:1.4'
     }
 }
 
@@ -25,7 +26,8 @@ tasks.withType(ScalaCompile){
 }
 apply plugin: 'com.android.application'
 apply plugin: 'jp.leafytree.android-scala'
-apply from: 'https://raw.githubusercontent.com/meonlol/vim-grand/master/grand.gradle'
+apply plugin: 'android-apt'
+def AAVersion = '3.3.2'
 
 android {
 
@@ -80,8 +82,56 @@ android {
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     compile 'org.scala-lang:scala-library:2.11.1'
+    apt "org.androidannotations:androidannotations:$AAVersion"
+    compile "org.androidannotations:androidannotations-api:$AAVersion"
 }
+
+apt {
+    arguments {
+        androidManifestFile variant.outputs[0].processResources.manifestFile
+        // if you have multiple outputs (when using splits), you may want to have other index than 0
+
+        // you should set your package name here if you are using different application IDs
+        // resourcePackageName "your.package.name"
+
+        // You can set optional annotation processing options here, like these commented options:
+        // logLevel 'INFO'
+        // logFile '/var/log/aa.log'
+    }
+}
+
 task wrapper(type: Wrapper) {
    gradleVersion = '2.2.1' //version required
 }
 
+import groovy.xml.StreamingMarkupBuilder
+
+task gradleDep2EclipseClasspath() {
+ description "Merge gradle dependencies into the eclipse class path"
+
+ def files = ["compile", "releaseCompile", "debugCompile", "instrumentTestCompile"]
+   .collect {project.configurations[it].files}
+   .inject([] as Set) {result, files -> result + files}
+   .asList()
+   .unique()
+   .grep {! it.@path.toString().contains("android-support")}
+
+  def classpath = new XmlParser().parse(file(".classpath"))
+  def libs = classpath.grep {it.'@gradle-dependency' == "true"}
+  libs.each {classpath.remove(it)}
+
+  files.collect {file ->
+     new Node(null, "classpathentry", [
+       "path": file.toString(),
+       "kind": "lib",
+       "exported": "true",
+       "gradle-dependency": "true"
+     ])
+  }.each {classpath.append(it)}
+
+  file(".classpath").withWriter {writer ->
+     writer << new StreamingMarkupBuilder().bind { mkp.xmlDeclaration() }
+     def printer = new XmlNodePrinter(new PrintWriter(writer))
+     printer.print(classpath)
+  }
+}
